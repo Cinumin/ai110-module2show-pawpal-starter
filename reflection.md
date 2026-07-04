@@ -1,6 +1,27 @@
 # PawPal+ Project Reflection
 
 ## 1. System Design
+The user should be able to enter their own and their pet's information, add/edit tasks, generate a daily schedule based on the user's contraints and priorities.
+Task
+title: str
+duration: float
+priority: str
+
+User
+name: str
+tasks: list[Task]
+add_task(task)
+edit_task(title, ...)
+remove_task(title) 
+
+Preferences
+time_available: float
+min_priority: str
+
+Schedule
+scheduled_tasks: list[Task]
+generate(tasks, preferences)
+display()
 
 **a. Initial design**
 

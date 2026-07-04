@@ -4,8 +4,8 @@ classDiagram
         +float time_available
         +str min_priority
         +add_task(pet, task) void
-        +edit_task(pet, task_id, ...) void
-        +remove_task(pet, task_id) void
+        +edit_task(pet, title, ...) void
+        +remove_task(pet, title) void
     }
 
     class Pet {
@@ -16,7 +16,6 @@ classDiagram
     }
 
     class Task {
-        +str id
         +str title
         +float duration
         +str priority
@@ -24,7 +23,7 @@ classDiagram
 
     class Schedule {
         +list~Task~ scheduled_tasks
-        +generate(pet, user) list~Task~
+        +generate(tasks, user) void
         +display() void
         +display_reasoning() void
     }
