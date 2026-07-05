@@ -1,7 +1,7 @@
 from dataclasses import asdict
 
 import streamlit as st
-from pawpal_system import Task, Pet, User, Schedule
+from pawpal_system import Task, Pet, User, Schedule, sort_by_time
 st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="centered")
 
 st.title("🐾 PawPal+")
@@ -91,28 +91,77 @@ if owner.pets:
     with col3:
         priority = st.selectbox("Priority", ["low", "medium", "high"], index=2)
 
+    col4, col5 = st.columns(2)
+    with col4:
+        frequency = st.selectbox("Frequency", ["once", "daily", "weekly"])
+    with col5:
+        start_time_input = st.text_input("Start time (HH:MM, optional)", value="")
+
     if st.button("Add task"):
-        owner.add_task(selected_pet, Task(title=task_title, duration=duration, priority=priority))
+        owner.add_task(
+            selected_pet,
+            Task(
+                title=task_title,
+                duration=duration,
+                priority=priority,
+                frequency=frequency,
+                start_time=start_time_input,
+            ),
+        )
 
     if selected_pet.tasks:
         st.write(f"Current tasks for {selected_pet.name}:")
         st.table([asdict(t) for t in selected_pet.tasks])
+        for task in selected_pet.tasks:
+            if not task.completed and st.button(f"Mark '{task.title}' complete", key=f"complete-{task.id}"):
+                task.mark_complete()
+                st.rerun()
     else:
         st.info("No tasks yet. Add one above.")
 
     st.divider()
 
+    st.subheader("Filter tasks")
+    filter_pet_name = st.selectbox("Pet", ["All pets"] + pet_names, key="filter_pet")
+    filter_status = st.selectbox("Status", ["All", "Pending", "Completed"], key="filter_status")
+
+    filter_pet = None if filter_pet_name == "All pets" else next(p for p in owner.pets if p.name == filter_pet_name)
+    filter_completed = {"All": None, "Pending": False, "Completed": True}[filter_status]
+    filtered = owner.sorted_tasks(pet=filter_pet, completed=filter_completed)
+
+    if filtered:
+        st.table([asdict(t) for t in filtered])
+    else:
+        st.info("No tasks match the selected filters.")
+
+    st.divider()
+
+    st.subheader("Conflicts")
+    conflicts = owner.detect_conflicts()
+    if conflicts:
+        for task_a, task_b in conflicts:
+            st.warning(
+                f"⚠️ '{task_a.title}' ({task_a.start_time}) overlaps with "
+                f"'{task_b.title}' ({task_b.start_time})"
+            )
+    else:
+        st.success("No scheduling conflicts detected.")
+
+    st.divider()
+
     st.subheader("Build Schedule")
     st.caption(f"Generate a schedule for {selected_pet.name} based on {owner.name}'s constraints.")
+    order_by = st.radio("Order by", ["Priority", "Time"], horizontal=True)
 
     if st.button("Generate schedule"):
         schedule = Schedule()
         schedule.generate(selected_pet, owner)
 
         if schedule.scheduled_tasks:
+            ordered = sort_by_time(schedule.scheduled_tasks) if order_by == "Time" else schedule.scheduled_tasks
             total = sum(t.duration for t in schedule.scheduled_tasks)
             st.write(f"{len(schedule.scheduled_tasks)} tasks scheduled, {total} minutes total:")
-            st.table([asdict(t) for t in schedule.scheduled_tasks])
+            st.table([asdict(t) for t in ordered])
         else:
             st.info(f"No tasks scheduled for {selected_pet.name}.")
 
