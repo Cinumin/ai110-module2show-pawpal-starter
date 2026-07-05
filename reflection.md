@@ -27,12 +27,14 @@ display()
 
 - Briefly describe your initial UML design.
 - What classes did you include, and what responsibilities did you assign to each?
+I included four classes: Pet, User, Task, and Schedule. The Pet class contains the pet's information, such as name, age, species, and tasks. The User class has access and can modify the tasks by adding or removing and can adjust their preferences, priorities, and time availability. The Task class includes the task name, its priority, and time duration. The Schedule class manages the schedule by generating the tasks, displaying the schedule, and providing a reasoning.
 
 **b. Design changes**
 
 - Did your design change during implementation?
 - If yes, describe at least one change and why you made it.
 
+Yes, for instance, I altered the generate(pet, user) function in the Schedule class to take in the tasks from the Pet and User and return a list[Task]. Since the Pet has information containing its tasks and the User modifies those tasks, the Schedule can thus retrieve those tasks tailored to the Pet from the Pet class instead of the Task class, which contains the general task descriptions. In short, User is the actor who modifies the Task objects. Pet is where the list lives, containing the Task objects.
 ---
 
 ## 2. Scheduling Logic and Tradeoffs
