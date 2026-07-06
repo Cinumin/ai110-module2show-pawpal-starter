@@ -1,0 +1,51 @@
+classDiagram
+    class User {
+        +str name
+        +float time_available
+        +str min_priority
+        +add_pet(pet) void
+        +add_task(pet, task) void
+        +edit_task(pet, task_id, ...) void
+        +remove_task(pet, task_id) void
+        +complete_task(pet, task_id) Task
+        +sorted_tasks(pet, completed) list~Task~
+        +detect_conflicts() list~tuple~
+    }
+
+    class Pet {
+        +str name
+        +str species
+        +float age
+        +list~Task~ tasks
+        +add_task(task) void
+        +pending_tasks() list~Task~
+        +complete_task(task_id) Task
+    }
+
+    class Task {
+        +str id
+        +str title
+        +float duration
+        +str priority
+        +str frequency
+        +bool completed
+        +str start_time
+        +is_due() bool
+        +overlaps(other) bool
+        +next_occurrence() Task
+    }
+
+    class Schedule {
+        +list~Task~ scheduled_tasks
+        +generate(pet, user) list~Task~
+        +display() void
+        +display_reasoning() void
+    }
+
+    User "1" --> "0..*" Pet : owns
+    Pet "1" --> "*" Task : has
+    Schedule --> Pet : reads tasks from
+    Schedule --> User : applies constraints from
+    Schedule --> Task : schedules
+    Task --> Task : next_occurrence (recurring)
+    User ..> Task : detect_conflicts (via overlaps)

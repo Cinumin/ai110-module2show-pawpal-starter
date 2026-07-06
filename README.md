@@ -22,6 +22,16 @@ Your final app should:
 - Display the plan clearly (and ideally explain the reasoning)
 - Include tests for the most important scheduling behaviors
 
+## Features
+
+- Priority-based scheduling — high-priority tasks are scheduled first within the time available.
+- Sorting by time — tasks are ordered chronologically, with unscheduled tasks listed last.
+- Conflict warnings — overlapping scheduled tasks (even across different pets) are flagged.
+- Daily & weekly recurrence — completing a recurring task automatically queues its next occurrence.
+- Due-date aware filtering — completed tasks and not-yet-due tasks are excluded from today's plan.
+- Priority-threshold filtering — tasks below your minimum priority setting are left out of the schedule.
+- Scheduling reasoning — see exactly why each task was included or skipped (priority vs. time constraints).
+
 ## Getting started
 
 ### Setup
@@ -63,7 +73,36 @@ Paste a sample of your app's CLI or Streamlit output here so a reader can see wh
 ```
 
 ## 🧪 Testing PawPal+
+Task completion & due status
 
+test_mark_complete_changes_task_status — completing a task flips completed to True.
+test_is_due_for_once_task_matches_completed_flag — a one-off task is due until completed, then not.
+test_is_due_respects_due_date — a task isn't due before its due_date, is due on/after it.
+test_is_due_true_when_no_due_date — no due_date means due immediately.
+test_is_due_false_when_completed_regardless_of_due_date — completed tasks are never due, even if their due date has arrived.
+Recurrence (next_occurrence / complete_task)
+
+test_next_occurrence_none_for_once_task — one-off tasks don't spawn a next occurrence.
+test_next_occurrence_daily_due_tomorrow — daily tasks spawn a new, uncompleted task with a fresh id, due the next day.
+test_next_occurrence_weekly_due_in_seven_days — weekly tasks spawn one due 7 days out.
+test_complete_task_spawns_next_occurrence_for_daily_task — completing a daily task marks it done and adds the next occurrence to the pet.
+test_complete_task_does_not_spawn_for_once_task — completing a one-off task spawns nothing.
+test_completing_daily_task_creates_pending_task_for_next_day — the spawned task actually lands in pet.tasks and correctly transitions from not-due-today to due-tomorrow.
+Conflict detection (overlaps / detect_conflicts)
+
+test_overlaps_detects_intersecting_time_windows — overlapping time windows are flagged, non-overlapping ones aren't.
+test_overlaps_ignores_unscheduled_tasks — a task with no start_time never overlaps anything.
+test_detect_conflicts_across_pets — conflicts are detected even across two different pets owned by the same user.
+test_detect_conflicts_ignores_not_yet_due_tasks — a task whose due date hasn't arrived yet is excluded from conflict checks.
+test_detect_conflicts_flags_duplicate_start_times — two tasks with the identical start time are flagged as conflicting.
+Filtering & sorting
+
+test_filter_tasks_by_pet_and_status — filtering by pet and by completion status works independently.
+test_sorted_tasks_returns_chronological_order — scheduled tasks come back sorted ascending by start time, regardless of insertion order.
+test_sorted_tasks_places_unscheduled_tasks_last — unscheduled tasks (no start_time) always sort after scheduled ones.
+Basic setup
+
+test_add_task_increases_pet_task_count — adding a task to a pet increases its task list.
 ```bash
 # Run the full test suite:
 pytest
@@ -76,8 +115,18 @@ Sample test output:
 
 ```
 # Paste your pytest output here
-```
+python -m pytest
+=================================================================== test session starts ===================================================================
+platform darwin -- Python 3.13.13, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/angelazhao/CodePath/ai110-module2show-pawpal-starter
+plugins: anyio-4.14.0
+collected 20 items                                                                                                                                        
 
+tests/test_pawpal.py ....................                                                                                                           [100%]
+
+=================================================================== 20 passed in 0.02s ====================================================================
+```
+Confidence Level: 5 Stars
 ## 📐 Smarter Scheduling
 
 > Fill in once you've implemented scheduling logic.
