@@ -114,7 +114,7 @@ if owner.pets:
         st.table([asdict(t) for t in selected_pet.tasks])
         for task in selected_pet.tasks:
             if not task.completed and st.button(f"Mark '{task.title}' complete", key=f"complete-{task.id}"):
-                task.mark_complete()
+                owner.complete_task(selected_pet, task.id)
                 st.rerun()
     else:
         st.info("No tasks yet. Add one above.")
@@ -156,7 +156,10 @@ if owner.pets:
     if st.button("Generate schedule"):
         schedule = Schedule()
         schedule.generate(selected_pet, owner)
+        st.session_state.schedule = schedule
 
+    schedule = st.session_state.get("schedule")
+    if schedule is not None and schedule.pet is selected_pet:
         if schedule.scheduled_tasks:
             ordered = sort_by_time(schedule.scheduled_tasks) if order_by == "Time" else schedule.scheduled_tasks
             total = sum(t.duration for t in schedule.scheduled_tasks)

@@ -84,10 +84,10 @@ Sample test output:
 
 | Feature | Method(s) | Notes |
 |---------|-----------|-------|
-| Task sorting | | e.g., by priority, duration |
-| Filtering | | e.g., skip tasks if time runs out |
-| Conflict handling | | e.g., overlapping time slots |
-| Recurring tasks | | e.g., daily vs. weekly |
+| Task sorting | `sort_by_time()`, `Schedule.generate()` (priority sort), `User.sorted_tasks()` | e.g., by priority, duration |
+| Filtering | `Pet.pending_tasks()`, `Schedule.generate()` (`_skipped_priority`/`_skipped_time`), `User.filter_tasks()` | e.g., skip tasks if time runs out |
+| Conflict handling | `Task.overlaps()`, `Task.time_range_minutes()`, `User.detect_conflicts()` | e.g., overlapping time slots |
+| Recurring tasks | `Task.next_occurrence()`, `Pet.complete_task()`, `User.complete_task()` | e.g., daily vs. weekly |
 
 ## 📸 Demo Walkthrough
 

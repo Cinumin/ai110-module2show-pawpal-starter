@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 from uuid import uuid4
 
 PRIORITY_ORDER = {"low": 1, "medium": 2, "high": 3}
@@ -28,6 +28,7 @@ class Task:
     completed: bool = False
     start_time: str = ""     # "HH:MM" 24-hour, "" means unscheduled
     last_completed_on: date | None = None
+    due_date: date | None = None   # calendar date this occurrence becomes due; None = due immediately
     id: str = field(default_factory=lambda: str(uuid4())) # each time a new Task is created, a unique id is generated using uuid4
 
     def mark_complete(self) -> None:
@@ -62,13 +63,27 @@ class Task:
         return this_start < other_end and other_start < this_end
 
     def is_due(self, today: date | None = None) -> bool:
-        """Return True if this task is due, accounting for recurrence."""
+        """Return True if this task is not completed and its due date has arrived."""
+        if self.completed:
+            return False
         today = today or date.today()
-        if self.frequency == "daily":
-            return self.last_completed_on is None or self.last_completed_on < today
-        if self.frequency == "weekly":
-            return self.last_completed_on is None or (today - self.last_completed_on).days >= 7
-        return not self.completed
+        return self.due_date is None or self.due_date <= today
+
+    def next_occurrence(self, today: date | None = None) -> "Task | None":
+        """Return a new pending Task for the next occurrence, or None if not recurring."""
+        if self.frequency not in ("daily", "weekly"):
+            return None
+        today = today or date.today()
+        delta = timedelta(days=1) if self.frequency == "daily" else timedelta(days=7)
+        return Task(
+            title=self.title,
+            duration=self.duration,
+            priority=self.priority,
+            description=self.description,
+            frequency=self.frequency,
+            start_time=self.start_time,
+            due_date=today + delta,
+        )
 
 
 @dataclass
@@ -98,6 +113,17 @@ class Pet:
         today = today or date.today()
         return [t for t in self.tasks if t.is_due(today)]
 
+    def complete_task(self, task_id: str, today: date | None = None) -> Task | None:
+        """Mark a task complete and, if recurring, add its next occurrence. Returns the new task, if any."""
+        task = self.get_task(task_id)
+        if task is None:
+            return None
+        task.mark_complete()
+        next_task = task.next_occurrence(today)
+        if next_task is not None:
+            self.add_task(next_task)
+        return next_task
+
 
 class User:
     def __init__(self, name: str, time_available: float, min_priority: str):
@@ -126,6 +152,10 @@ class User:
         """Remove the task with the given id from the given pet."""
         pet.remove_task(task_id)
 
+    def complete_task(self, pet: Pet, task_id: str) -> Task | None:
+        """Mark the given pet's task complete, spawning its next occurrence if recurring."""
+        return pet.complete_task(task_id)
+
     def all_tasks(self) -> list[Task]:
         """Return every task across all of this user's pets."""
         return [task for pet in self.pets for task in pet.tasks]
@@ -141,9 +171,10 @@ class User:
         """Return filtered tasks sorted by start_time (unscheduled tasks last)."""
         return sort_by_time(self.filter_tasks(pet=pet, completed=completed))
 
-    def detect_conflicts(self) -> list[tuple[Task, Task]]:
+    def detect_conflicts(self, today: date | None = None) -> list[tuple[Task, Task]]:
         """Return pairs of tasks (from any of this user's pets) with overlapping scheduled times."""
-        timed = [t for t in self.all_tasks() if t.start_time and not t.completed]
+        today = today or date.today()
+        timed = [t for t in self.all_tasks() if t.start_time and t.is_due(today)]
         conflicts = []
         for i in range(len(timed)):
             for j in range(i + 1, len(timed)):

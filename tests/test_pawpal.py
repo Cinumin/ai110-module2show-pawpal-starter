@@ -31,24 +31,80 @@ def test_is_due_for_once_task_matches_completed_flag():
     assert task.is_due() is False
 
 
-def test_is_due_for_daily_task_resets_next_day():
+def test_is_due_respects_due_date():
     today = date(2026, 7, 5)
-    task = Task(title="Feed", duration=10, priority="medium", frequency="daily")
-
-    task.mark_complete()
-    task.last_completed_on = today
+    task = Task(title="Feed", duration=10, priority="medium", due_date=today + timedelta(days=1))
 
     assert task.is_due(today) is False
     assert task.is_due(today + timedelta(days=1)) is True
 
 
-def test_is_due_for_weekly_task_due_after_seven_days():
+def test_is_due_true_when_no_due_date():
+    task = Task(title="Playtime", duration=20, priority="low")
+
+    assert task.is_due() is True
+
+
+def test_is_due_false_when_completed_regardless_of_due_date():
+    today = date(2026, 7, 5)
+    task = Task(title="Feed", duration=10, priority="medium", due_date=today)
+    task.mark_complete()
+
+    assert task.is_due(today) is False
+
+
+def test_next_occurrence_none_for_once_task():
+    task = Task(title="Vet visit", duration=30, priority="high", frequency="once")
+
+    assert task.next_occurrence() is None
+
+
+def test_next_occurrence_daily_due_tomorrow():
+    today = date(2026, 7, 5)
+    task = Task(title="Feed", duration=10, priority="medium", frequency="daily")
+
+    next_task = task.next_occurrence(today)
+
+    assert next_task is not None
+    assert next_task.id != task.id
+    assert next_task.completed is False
+    assert next_task.due_date == today + timedelta(days=1)
+
+
+def test_next_occurrence_weekly_due_in_seven_days():
     today = date(2026, 7, 5)
     task = Task(title="Grooming", duration=20, priority="low", frequency="weekly")
-    task.last_completed_on = today
 
-    assert task.is_due(today + timedelta(days=6)) is False
-    assert task.is_due(today + timedelta(days=7)) is True
+    next_task = task.next_occurrence(today)
+
+    assert next_task is not None
+    assert next_task.due_date == today + timedelta(days=7)
+
+
+def test_complete_task_spawns_next_occurrence_for_daily_task():
+    today = date(2026, 7, 5)
+    pet = Pet(name="Rex", species="dog", age=3)
+    task = Task(title="Feed", duration=10, priority="medium", frequency="daily")
+    pet.add_task(task)
+
+    spawned = pet.complete_task(task.id, today)
+
+    assert task.completed is True
+    assert spawned is not None
+    assert spawned.due_date == today + timedelta(days=1)
+    assert len(pet.tasks) == 2
+
+
+def test_complete_task_does_not_spawn_for_once_task():
+    pet = Pet(name="Rex", species="dog", age=3)
+    task = Task(title="Vet visit", duration=30, priority="high", frequency="once")
+    pet.add_task(task)
+
+    spawned = pet.complete_task(task.id)
+
+    assert task.completed is True
+    assert spawned is None
+    assert len(pet.tasks) == 1
 
 
 def test_overlaps_detects_intersecting_time_windows():
@@ -83,6 +139,31 @@ def test_detect_conflicts_across_pets():
     assert len(conflicts) == 1
     titles = {conflicts[0][0].title, conflicts[0][1].title}
     assert titles == {"Walk", "Grooming"}
+
+
+def test_detect_conflicts_ignores_not_yet_due_tasks():
+    today = date(2026, 7, 5)
+    owner = User(name="Alice", time_available=120, min_priority="low")
+    dog = Pet(name="Buddy", species="dog", age=3)
+    cat = Pet(name="Whiskers", species="cat", age=2)
+    owner.add_pet(dog)
+    owner.add_pet(cat)
+
+    owner.add_task(dog, Task(title="Walk", duration=30, priority="high", start_time="07:00"))
+    owner.add_task(
+        cat,
+        Task(
+            title="Grooming",
+            duration=30,
+            priority="high",
+            start_time="07:15",
+            due_date=today + timedelta(days=1),
+        ),
+    )
+
+    conflicts = owner.detect_conflicts(today)
+
+    assert conflicts == []
 
 
 def test_filter_tasks_by_pet_and_status():
