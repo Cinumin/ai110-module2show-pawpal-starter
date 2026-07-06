@@ -183,6 +183,55 @@ def test_filter_tasks_by_pet_and_status():
     assert len(owner.filter_tasks(completed=False)) == 1
 
 
+def test_sorted_tasks_returns_chronological_order():
+    owner = User(name="Alice", time_available=120, min_priority="low")
+    pet = Pet(name="Buddy", species="dog", age=3)
+    owner.add_pet(pet)
+
+    noon = Task(title="Lunch", duration=15, priority="medium", start_time="12:00")
+    morning = Task(title="Walk", duration=30, priority="high", start_time="07:00")
+    evening = Task(title="Dinner", duration=15, priority="medium", start_time="18:30")
+    owner.add_task(pet, noon)
+    owner.add_task(pet, morning)
+    owner.add_task(pet, evening)
+
+    ordered = owner.sorted_tasks()
+
+    assert ordered == [morning, noon, evening]
+
+
+def test_completing_daily_task_creates_pending_task_for_next_day():
+    today = date(2026, 7, 5)
+    pet = Pet(name="Rex", species="dog", age=3)
+    task = Task(title="Feed", duration=10, priority="medium", frequency="daily", start_time="08:00")
+    pet.add_task(task)
+
+    new_task = pet.complete_task(task.id, today)
+
+    assert new_task is not None
+    assert new_task in pet.tasks
+    assert new_task.due_date == today + timedelta(days=1)
+    assert new_task.is_due(today) is False
+    assert new_task.is_due(today + timedelta(days=1)) is True
+
+
+def test_detect_conflicts_flags_duplicate_start_times():
+    owner = User(name="Alice", time_available=120, min_priority="low")
+    dog = Pet(name="Buddy", species="dog", age=3)
+    cat = Pet(name="Whiskers", species="cat", age=2)
+    owner.add_pet(dog)
+    owner.add_pet(cat)
+
+    owner.add_task(dog, Task(title="Walk", duration=20, priority="high", start_time="09:00"))
+    owner.add_task(cat, Task(title="Feed", duration=20, priority="medium", start_time="09:00"))
+
+    conflicts = owner.detect_conflicts()
+
+    assert len(conflicts) == 1
+    titles = {conflicts[0][0].title, conflicts[0][1].title}
+    assert titles == {"Walk", "Feed"}
+
+
 def test_sorted_tasks_places_unscheduled_tasks_last():
     owner = User(name="Alice", time_available=120, min_priority="low")
     pet = Pet(name="Buddy", species="dog", age=3)
